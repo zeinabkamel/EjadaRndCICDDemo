@@ -1,0 +1,16 @@
+﻿@page
+@model CosmeticClinicManagement.Pages.Stores.CreateModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<h1>Create Store</h1>
+
+<form method="post" novalidate>
+    <div class="form-group">
+        <label asp-for="Input.Name"></label>
+        <input asp-for="Input.Name" class="form-control" />
+        <span asp-validation-for="Input.Name" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-page="./Index" class="btn btn-secondary">Cancel</a>
+</form>

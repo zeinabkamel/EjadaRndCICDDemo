@@ -1,0 +1,385 @@
+﻿@model dynamic 
+
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">Admin Dashboard</h2>
+
+    <div id="dashboard-loading" class="text-center mt-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading dashboard data...</p>
+    </div>
+
+    <div id="dashboard-content" style="display:none;">
+        <!-- Summary Cards Row 1 -->
+        <div class="row g-3 mb-4">
+            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="card text-center shadow-sm border-primary">
+                    <div class="card-body">
+                        <i class="bi bi-people-fill text-primary fs-2"></i>
+                        <h3 id="totalPatients" class="mt-2 mb-0">0</h3>
+                        <p class="text-muted mb-0 small">Total Patients</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="card text-center shadow-sm border-info">
+                    <div class="card-body">
+                        <i class="bi bi-person-badge-fill text-info fs-2"></i>
+                        <h3 id="totalDoctors" class="mt-2 mb-0">0</h3>
+                        <p class="text-muted mb-0 small">Total Doctors</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="card text-center shadow-sm border-warning">
+                    <div class="card-body">
+                        <i class="bi bi-clipboard-check text-warning fs-2"></i>
+                        <h3 id="activePlans" class="mt-2 mb-0">0</h3>
+                        <p class="text-muted mb-0 small">Active Plans</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="card text-center shadow-sm border-success">
+                    <div class="card-body">
+                        <i class="bi bi-clipboard-check-fill text-success fs-2"></i>
+                        <h3 id="closedPlans" class="mt-2 mb-0">0</h3>
+                        <p class="text-muted mb-0 small">Closed Plans</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="card text-center shadow-sm border-secondary">
+                    <div class="card-body">
+                        <i class="bi bi-shop text-secondary fs-2"></i>
+                        <h3 id="totalStores" class="mt-2 mb-0">0</h3>
+                        <p class="text-muted mb-0 small">Stores</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                <div class="card text-center shadow-sm border-danger">
+                    <div class="card-body">
+                        <i class="bi bi-exclamation-triangle-fill text-danger fs-2"></i>
+                        <h3 id="lowStockCount" class="mt-2 mb-0">0</h3>
+                        <p class="text-muted mb-0 small">Low Stock Items</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-bar-chart-fill"></i> Treatment Plans Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="plansChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-bar-chart-line-fill"></i> Top Doctors Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="doctorsChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Items & Expiring Items -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="bi bi-exclamation-octagon-fill"></i> Low Stock Items</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Store</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lowStockTableBody">
+                                    <tr>
+                                        <td colspan="4" class="text-center">No low stock items</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-calendar-x-fill"></i> Expiring Items (30 Days)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Store</th>
+                                        <th>Days Left</th>
+                                        <th>Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expiringItemsTableBody">
+                                    <tr>
+                                        <td colspan="4" class="text-center">No expiring items</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Doctors & Recent Patients -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-trophy-fill"></i> Top Doctors</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Doctor</th>
+                                        <th>Active Plans</th>
+                                        <th>Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topDoctorsTableBody">
+                                    <tr>
+                                        <td colspan="3" class="text-center">No data available</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-person-plus-fill"></i> Recent Patients</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Age</th>
+                                        <th>Doctor</th>
+                                        <th>Registered</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentPatientsTableBody">
+                                    <tr>
+                                        <td colspan="4" class="text-center">No recent patients</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $(document).ready(function () {
+        console.log('Fetching admin dashboard data...');
+        $.ajax({
+            url: '/api/dashboard/admin/stats',
+            type: 'GET',
+            success: function (data) {
+                console.log('Dashboard data received:', data);
+                // Update summary cards
+                $('#totalPatients').text(data.totalPatients);
+                $('#totalDoctors').text(data.totalDoctors);
+                $('#activePlans').text(data.activeTreatmentPlans);
+                $('#closedPlans').text(data.closedTreatmentPlans);
+                $('#totalStores').text(data.totalStores);
+                $('#lowStockCount').text(data.lowStockItemsCount);
+
+                // Treatment Plans Chart
+                const plansCtx = document.getElementById('plansChart').getContext('2d');
+                new Chart(plansCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active Plans', 'Closed Plans'],
+                        datasets: [{
+                            label: 'Treatment Plans',
+                            data: [data.activeTreatmentPlans, data.closedTreatmentPlans],
+                            backgroundColor: ['#ffc107', '#28a745'],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+
+                // Top Doctors Chart
+                if (data.topDoctors && data.topDoctors.length > 0) {
+                    const doctorsCtx = document.getElementById('doctorsChart').getContext('2d');
+                    new Chart(doctorsCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.topDoctors.map(d => d.doctorName),
+                            datasets: [{
+                                label: 'Active Plans',
+                                data: data.topDoctors.map(d => d.activePlansCount),
+                                backgroundColor: '#007bff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                }
+
+                // Low Stock Items Table
+                if (data.lowStockItems && data.lowStockItems.length > 0) {
+                    let lowStockHtml = '';
+                    data.lowStockItems.forEach(function(item) {
+                        const quantityClass = item.currentQuantity <= 5 ? 'text-danger fw-bold' : 'text-warning';
+                        lowStockHtml += `
+                            <tr>
+                                <td><strong>${item.name}</strong></td>
+                                <td><small>${item.storeName}</small></td>
+                                <td class="${quantityClass}">${item.currentQuantity}</td>
+                                <td>$${item.price.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+                    $('#lowStockTableBody').html(lowStockHtml);
+                }
+
+                // Expiring Items Table
+                if (data.expiringItems && data.expiringItems.length > 0) {
+                    let expiringHtml = '';
+                    data.expiringItems.forEach(function(item) {
+                        const daysClass = item.daysUntilExpiry <= 7 ? 'text-danger fw-bold' : 
+                                         item.daysUntilExpiry <= 14 ? 'text-warning fw-bold' : '';
+                        expiringHtml += `
+                            <tr>
+                                <td><strong>${item.name}</strong></td>
+                                <td><small>${item.storeName}</small></td>
+                                <td class="${daysClass}">${item.daysUntilExpiry} days</td>
+                                <td>${item.quantity}</td>
+                            </tr>
+                        `;
+                    });
+                    $('#expiringItemsTableBody').html(expiringHtml);
+                }
+
+                // Top Doctors Table
+                if (data.topDoctors && data.topDoctors.length > 0) {
+                    let doctorsHtml = '';
+                    data.topDoctors.forEach(function(doctor) {
+                        doctorsHtml += `
+                            <tr>
+                                <td><strong>${doctor.doctorName}</strong></td>
+                                <td><span class="badge bg-warning">${doctor.activePlansCount}</span></td>
+                                <td><span class="badge bg-success">${doctor.completedSessionsCount}</span></td>
+                            </tr>
+                        `;
+                    });
+                    $('#topDoctorsTableBody').html(doctorsHtml);
+                }
+
+                // Recent Patients Table
+                if (data.recentPatients && data.recentPatients.length > 0) {
+                    let patientsHtml = '';
+                    data.recentPatients.forEach(function(patient) {
+                        const date = new Date(patient.registrationDate);
+                        const formattedDate = date.toLocaleDateString();
+                        patientsHtml += `
+                            <tr>
+                                <td><strong>${patient.patientName}</strong></td>
+                                <td>${patient.age}</td>
+                                <td><small>${patient.assignedDoctor}</small></td>
+                                <td><small>${formattedDate}</small></td>
+                            </tr>
+                        `;
+                    });
+                    $('#recentPatientsTableBody').html(patientsHtml);
+                }
+
+                $('#dashboard-loading').hide();
+                $('#dashboard-content').show();
+            },
+            error: function (xhr, status, error) {
+                console.error('Failed to load admin dashboard data:', error);
+                console.error('Status:', status);
+                console.error('Response:', xhr.responseText);
+                $('#dashboard-loading').html('<div class="alert alert-danger mt-3">Failed to load dashboard data. Please check console for details.<br>Error: ' + error + '</div>');
+            }
+        });
+    });
+</script>
+
+<style>
+    .card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .card-body i.fs-2 {
+        opacity: 0.7;
+    }
+
+    .table-sm td, .table-sm th {
+        padding: 0.5rem;
+    }
+</style>

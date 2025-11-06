@@ -1,0 +1,48 @@
+﻿@page
+@model CosmeticClinicManagement.Pages.Stores.RawMaterials.CreateModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+ @addTagHelper *, Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers
+
+<h1>Add Raw Material</h1>
+
+<form method="post">
+    @Html.AntiForgeryToken()
+
+@*     <div asp-validation-summary="All" class="text-danger"></div>
+ *@
+    <input type="hidden" asp-for="Input.StoreId" />
+    <div class="form-group">
+        <label asp-for="Input.Name"></label>
+        <input asp-for="Input.Name" class="form-control" />
+        <span asp-validation-for="Input.Name" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Input.Description"></label>
+        <input asp-for="Input.Description" class="form-control" />
+        <span asp-validation-for="Input.Description" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Input.Quantity"></label>
+        <input asp-for="Input.Quantity" class="form-control" type="number" />
+        <span asp-validation-for="Input.Quantity" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Input.Price"></label>
+        <input asp-for="Input.Price" class="form-control" step="0.01" />
+        <span asp-validation-for="Input.Price" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Input.ExpiryDate"></label>
+        <input asp-for="Input.ExpiryDate" class="form-control" type="date" />
+        <span asp-validation-for="Input.ExpiryDate" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Add</button>
+    <a asp-page="/Stores/Details" asp-route-id="@Model.StoreId" class="btn btn-secondary">Cancel</a>
+</form>
+
+ 

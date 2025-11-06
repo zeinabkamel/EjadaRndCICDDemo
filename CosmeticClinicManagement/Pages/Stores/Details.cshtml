@@ -1,0 +1,49 @@
+﻿@page "{id:guid}"
+@model CosmeticClinicManagement.Pages.Stores.DetailsModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<h1>Store: @Model.Store?.Name</h1>
+
+<p>
+    <a asp-page="/Stores/Index" class="btn btn-secondary">Back to list</a>
+    <a asp-page="/Stores/Edit" asp-route-id="@Model.Store?.Id" class="btn btn-primary">Edit Store</a>
+</p>
+
+<h2>Raw Materials</h2>
+<p>
+    <a asp-page="/Stores/RawMaterials/Create" asp-route-storeId="@Model.Store?.Id" class="btn btn-sm btn-success">Add Raw Material</a>
+</p>
+
+@if (Model.Store?.RawMaterials == null || !Model.Store.RawMaterials.Any())
+{
+    <p>No raw materials.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Expiry</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var rm in Model.Store.RawMaterials)
+        {
+            <tr>
+                <td>@rm.Name</td>
+                <td>@rm.Quantity</td>
+                <td>@rm.Price.ToString("C")</td>
+                <td>@rm.ExpiryDate.ToShortDateString()</td>
+                <td>
+                    <a asp-page="/Stores/RawMaterials/Edit" asp-route-id="@rm.Id" asp-route-storeId="@Model.Store.Id" class="btn btn-sm btn-primary">Edit</a>
+                    <a asp-page="/Stores/RawMaterials/Delete" asp-route-id="@rm.Id" asp-route-storeId="@Model.Store.Id" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

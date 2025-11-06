@@ -1,0 +1,218 @@
+﻿<div class="container mt-4" id="receptionist-dashboard">
+    <h2 class="mb-4">Receptionist Dashboard</h2>
+
+    <div id="dashboard-loading" class="text-center mt-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div id="dashboard-content" style="display:none;">
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm text-center">
+                    <div class="card-body">
+                        <h4 id="totalPatients" class="text-primary">--</h4>
+                        <p class="mb-0">Registered Patients</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm text-center">
+                    <div class="card-body">
+                        <h4 id="totalTreatmentPlans" class="text-info">--</h4>
+                        <p class="mb-0">Active Treatment Plans</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-2 col-sm-4">
+                <div class="card shadow-sm text-center">
+                    <div class="card-body">
+                        <h4 id="upcomingSessions" class="text-warning">--</h4>
+                        <p class="mb-0">Upcoming</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-2 col-sm-4">
+                <div class="card shadow-sm text-center">
+                    <div class="card-body">
+                        <h4 id="completedSessions" class="text-success">--</h4>
+                        <p class="mb-0">Completed</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-2 col-sm-4">
+                <div class="card shadow-sm text-center">
+                    <div class="card-body">
+                        <h4 id="cancelledSessions" class="text-danger">--</h4>
+                        <p class="mb-0">Cancelled</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Sessions -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Upcoming Sessions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="upcomingSessionsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Patient</th>
+                                        <th>Age</th>
+                                        <th>Doctor</th>
+                                        @* <th>Treatment</th> *@
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="upcomingSessionsBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center">No upcoming sessions</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Completed Sessions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-check-circle"></i> Recent Completed Sessions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="completedSessionsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Patient</th>
+                                        <th>Doctor</th>
+                                        @* <th>Treatment</th> *@
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="completedSessionsBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center">No completed sessions</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $.ajax({
+            url: '/api/app/receptionist-dashboard/summary',
+            type: 'GET',
+            success: function (data) {
+                // Update summary cards
+                $('#totalPatients').text(data.totalPatients);
+                $('#totalTreatmentPlans').text(data.totalTreatmentPlans);
+                $('#upcomingSessions').text(data.upcomingSessions);
+                $('#completedSessions').text(data.completedSessions);
+                $('#cancelledSessions').text(data.cancelledSessions);
+
+                // Populate upcoming sessions table
+                if (data.upcomingSessionsList && data.upcomingSessionsList.length > 0) {
+                    let upcomingHtml = '';
+                    data.upcomingSessionsList.forEach(function(session) {
+                        const date = new Date(session.sessionDate);
+                        const formattedDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        const statusBadge = getStatusBadge(session.status);
+                        
+                        upcomingHtml += `
+                            <tr>
+                                <td>${formattedDate}</td>
+                                <td><strong>${session.patientName}</strong></td>
+                                <td>${session.patientAge}</td>
+                                <td>${session.doctorName}</td>
+                                <td>${statusBadge}</td>
+                            </tr>
+                        `;
+                    });
+                    $('#upcomingSessionsBody').html(upcomingHtml);
+                }
+
+                // Populate recent completed sessions table
+                if (data.recentCompletedSessions && data.recentCompletedSessions.length > 0) {
+                    let completedHtml = '';
+                    data.recentCompletedSessions.forEach(function(session) {
+                        const date = new Date(session.sessionDate);
+                        const formattedDate = date.toLocaleDateString();
+                        const statusBadge = getStatusBadge(session.status);
+                        
+                        completedHtml += `
+                            <tr>
+                                <td>${formattedDate}</td>
+                                <td><strong>${session.patientName}</strong></td>
+                                <td>${session.doctorName}</td>
+                                <td>${statusBadge}</td>
+                            </tr>
+                        `;
+                    });
+                    $('#completedSessionsBody').html(completedHtml);
+                }
+
+                $('#dashboard-loading').hide();
+                $('#dashboard-content').show();
+            },
+            error: function (xhr, status, error) {
+                console.error('Failed to load receptionist dashboard data:', error);
+                $('#dashboard-loading').html('<div class="alert alert-danger mt-3">Failed to load dashboard data. Please try again.</div>');
+            }
+        });
+    });
+
+    function getStatusBadge(status) {
+        const statusMap = {
+            'Planned': 'badge bg-warning text-dark',
+            'Completed': 'badge bg-success',
+            'Cancelled': 'badge bg-danger',
+            'InProgress': 'badge bg-info'
+        };
+        const badgeClass = statusMap[status] || 'badge bg-secondary';
+        return `<span class="${badgeClass}">${status}</span>`;
+    }
+</script>
+
+<style>
+    #receptionist-dashboard .card {
+        transition: transform 0.2s;
+    }
+    
+    #receptionist-dashboard .card:hover {
+        transform: translateY(-5px);
+    }
+    
+    #receptionist-dashboard .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    #receptionist-dashboard .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>

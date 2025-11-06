@@ -1,0 +1,20 @@
+﻿@page
+@model CosmeticClinicManagement.Pages.Stores.RawMaterials.DeleteModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<h1>Delete Raw Material</h1>
+
+@if (Model.RawMaterial != null)
+{
+    <p>Are you sure you want to delete <strong>@Model.RawMaterial.Name</strong>?</p>
+
+    <form method="post">
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <a asp-page="/Stores/Details" asp-route-id="@Model.StoreId" class="btn btn-secondary">Cancel</a>
+    </form>
+}
+else
+{
+    <p class="text-warning">Raw material not found.</p>
+    <a asp-page="/Stores/Details" asp-route-id="@Model.StoreId" class="btn btn-secondary">Back</a>
+}

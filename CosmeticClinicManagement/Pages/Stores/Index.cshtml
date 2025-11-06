@@ -1,0 +1,21 @@
+﻿@page
+@model CosmeticClinicManagement.Pages.Stores.IndexModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<h1>Stores</h1>
+
+<p>
+    <a asp-page="./Create" class="btn btn-primary">Create Store</a>
+</p>
+
+@foreach (var store in Model.Stores)
+{
+    <section class="mb-4">
+        <h3>@store.Name</h3>
+        <p>
+            <a asp-page="./Details" asp-route-id="@store.Id" class="btn btn-sm btn-secondary">Details</a>
+            <a asp-page="./Edit" asp-route-id="@store.Id" class="btn btn-sm btn-primary">Edit</a>
+            <a asp-page="./Delete" asp-route-id="@store.Id" class="btn btn-sm btn-danger">Delete</a>
+        </p>
+    </section>
+}

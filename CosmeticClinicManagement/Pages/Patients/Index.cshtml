@@ -1,0 +1,29 @@
+﻿@page
+@model CosmeticClinicManagement.Pages.Patients.IndexModel
+@using Microsoft.Extensions.Localization
+@using CosmeticClinicManagement.Localization
+@inject IStringLocalizer<CosmeticClinicManagementResource> L
+
+@section scripts
+{
+	<script src="~/Pages/Patients/Index.cshtml.js"></script>
+}
+
+<abp-card>
+	<abp-card-header>
+		<abp-row>
+			<abp-column size-md="_6">
+				<abp-card-title>@L["Menu:Patients"]</abp-card-title>
+			</abp-column>
+			<abp-column size-md="_6" class="text-end">
+				<abp-button id="NewPatientButton"
+				text="@L["NewPatient"].Value"
+				icon="plus"
+				button-type="Primary"/>
+			</abp-column>
+		</abp-row>
+	</abp-card-header>
+	<abp-card-body>
+		<abp-table id="PatientsTable" striped-rows="true" />
+	</abp-card-body>
+</abp-card>
