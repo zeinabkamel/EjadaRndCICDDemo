@@ -11,18 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4 # Checkout the repository code
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x' # Specify the .NET SDK version
+        dotnet-version: '8.0.x'  # أو غيّريها حسب إصدار مشروعك (مثلاً 7.0.x أو 6.0.x)
 
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: Build
-      run: dotnet build --no-restore
+    - name: Build project
+      run: dotnet build --no-restore --configuration Release
 
-    - name: Run tests
-      run: dotnet test --no-build --verbosity normal
+    - name: Run unit tests
+      run: dotnet test --no-build --configuration Release --verbosity normal
+
+    # (اختياري) حفظ تقارير الاختبارات كـ artifacts لعرضها من GitHub Actions
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: '**/TestResults/*.trx'
