@@ -1,4 +1,4 @@
-name: Simple Security CI (build + DAST + optional Fortify SAST)
+name: Simple Security CI (build + optional DAST + optional Fortify SAST)
 
 on:
   push:
@@ -39,19 +39,45 @@ jobs:
           echo "Replace this step with your real build/test commands."
 
       # ---------------------
-      # DAST: run ZAP only if TARGET_URL secret exists
+      # Determine whether TARGET_URL secret exists (safe check)
       # ---------------------
-      - name: Run DAST (OWASP ZAP) if TARGET_URL provided
-        if: ${{ secrets.TARGET_URL != '' }}
+      - name: Determine if TARGET_URL secret is set
+        id: check_target
         run: |
-          TARGET=${{ secrets.TARGET_URL }}
+          if [ -n "${{ secrets.TARGET_URL }}" ]; then
+            echo "run_dast=true" >> $GITHUB_OUTPUT
+            echo "target=${{ secrets.TARGET_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "run_dast=false" >> $GITHUB_OUTPUT
+            echo "target=" >> $GITHUB_OUTPUT
+          fi
+
+      # ---------------------
+      # Determine whether Fortify credentials exist (safe check)
+      # ---------------------
+      - name: Determine if Fortify credentials exist
+        id: check_fortify
+        run: |
+          if [ -n "${{ secrets.FOD_PAT }}" ] || [ -n "${{ secrets.SSC_TOKEN }}" ]; then
+            echo "run_fortify=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_fortify=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ---------------------
+      # DAST: run ZAP only if TARGET_URL provided
+      # ---------------------
+      - name: Run DAST (OWASP ZAP)
+        if: ${{ steps.check_target.outputs.run_dast == 'true' }}
+        run: |
+          TARGET=${{ steps.check_target.outputs.target }}
           echo "Running ZAP against $TARGET"
           docker pull owasp/zap2docker-stable:latest
           docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap-full-scan.py -t "${TARGET}" -r ${ZAP_REPORT_HTML} -J ${ZAP_REPORT_JSON} || true
           tar -czf zap-reports.tar.gz ${ZAP_REPORT_HTML} ${ZAP_REPORT_JSON} || true
 
       - name: Upload ZAP reports (if any)
-        if: always()
+        if: ${{ steps.check_target.outputs.run_dast == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: zap-reports
@@ -62,7 +88,7 @@ jobs:
         continue-on-error: true
 
       - name: Fail on ZAP Medium+ findings
-        if: always() && (secrets.TARGET_URL != '')
+        if: ${{ steps.check_target.outputs.run_dast == 'true' }}
         run: |
           if [ ! -f ${ZAP_REPORT_JSON} ]; then
             echo "No ZAP JSON report found, skipping vulnerability fail-check."
@@ -78,10 +104,10 @@ jobs:
           fi
 
       # ---------------------
-      # SAST: Fortify (optional)
+      # SAST: Fortify (optional) - run only if credentials present
       # ---------------------
-      - name: Run Fortify SAST (if credentials present)
-        if: ${{ secrets.FOD_PAT != '' || secrets.SSC_TOKEN != '' }}
+      - name: Run Fortify SAST Scan
+        if: ${{ steps.check_fortify.outputs.run_fortify == 'true' }}
         uses: fortify/github-action@ef5539bf4bd9c45c0bd971978f635a69eae55297
         with:
           sast-scan: true
