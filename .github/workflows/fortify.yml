@@ -1,173 +1,101 @@
-name: Fortify SAST + OWASP ZAP DAST
+name: Simple Security CI (build + DAST + optional Fortify SAST)
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: ["main"]
 
 permissions:
   contents: read
   actions: read
   security-events: write
-  issues: write   # required if creating issues
-  # pull-requests: write  # enable if you want PR comments
+  issues: write
 
 jobs:
-  scan:
+  test-and-scan:
     runs-on: ubuntu-latest
     env:
-      JUICE_SHOP_PORT: 3000
-      JUICE_SHOP_BASE_URL: http://127.0.0.1:3000
       ZAP_REPORT_HTML: zap-report.html
       ZAP_REPORT_JSON: zap-report.json
 
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Simple build step (optional)
+      - name: Build & Run tests (edit these commands for your project)
         run: |
-          echo "Insert your build commands here if needed (mvn, dotnet build, npm ci, etc.)"
+          # <-- replace the lines below with your project's build/test commands -->
+          # Examples (uncomment the one that matches your project):
+          # Node.js:
+          # npm ci
+          # npm test
+          #
+          # Maven:
+          # mvn -B -DskipTests=false test
+          #
+          # .NET:
+          # dotnet restore
+          # dotnet test
+          #
+          echo "Replace this step with your real build/test commands."
 
-      ################################################################
-      # ---------- DAST: decide target (real TARGET_URL or JuiceShop)
-      ################################################################
-      - name: Determine DAST target
-        id: dast_target
+      # ---------------------
+      # DAST: run ZAP only if TARGET_URL secret exists
+      # ---------------------
+      - name: Run DAST (OWASP ZAP) if TARGET_URL provided
+        if: ${{ secrets.TARGET_URL != '' }}
         run: |
-          # If you want to scan a real target, add a repo secret named TARGET_URL (e.g., https://staging.example.com)
-          if [ -n "${{ secrets.TARGET_URL }}" ]; then
-            echo "target=${{ secrets.TARGET_URL }}" >> $GITHUB_OUTPUT
-            echo "mode=external" >> $GITHUB_OUTPUT
-          else
-            # use local Juice Shop simulation
-            echo "target=${{ env.JUICE_SHOP_BASE_URL }}" >> $GITHUB_OUTPUT
-            echo "mode=juice" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Start Juice Shop (if needed)
-        if: steps.dast_target.outputs.mode == 'juice'
-        run: |
-          docker pull bkimminich/juice-shop:latest
-          docker run -d --name juice_shop -p ${JUICE_SHOP_PORT}:3000 bkimminich/juice-shop:latest
-          # wait for app
-          for i in $(seq 1 30); do
-            if curl -sSf ${JUICE_SHOP_BASE_URL} >/dev/null; then
-              echo "Juice Shop is up"
-              break
-            fi
-            echo "Waiting for Juice Shop... ($i)"
-            sleep 2
-          done
-
-      - name: Run OWASP ZAP full scan (DAST)
-        id: zap_scan
-        run: |
-          TARGET=${{ steps.dast_target.outputs.target }}
-          echo "Running ZAP full scan against $TARGET"
+          TARGET=${{ secrets.TARGET_URL }}
+          echo "Running ZAP against $TARGET"
           docker pull owasp/zap2docker-stable:latest
-          # run zap full scan; allow failures (we will parse results)
           docker run --rm -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap-full-scan.py -t "${TARGET}" -r ${ZAP_REPORT_HTML} -J ${ZAP_REPORT_JSON} || true
-          # compress reports
           tar -czf zap-reports.tar.gz ${ZAP_REPORT_HTML} ${ZAP_REPORT_JSON} || true
 
-      - name: Upload ZAP reports
+      - name: Upload ZAP reports (if any)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: zap-reports
-          path: zap-reports.tar.gz
+          path: |
+            zap-reports.tar.gz
+            ${ZAP_REPORT_HTML}
+            ${ZAP_REPORT_JSON}
+        continue-on-error: true
 
-      ################################################################
-      # ---------- Analyze ZAP results (fail on MEDIUM+ by default)  ###
-      ################################################################
-      - name: Analyze ZAP JSON and fail on MEDIUM+
-        if: always()
+      - name: Fail on ZAP Medium+ findings
+        if: always() && (secrets.TARGET_URL != '')
         run: |
           if [ ! -f ${ZAP_REPORT_JSON} ]; then
-            echo "No ZAP JSON report found; skipping analysis."
+            echo "No ZAP JSON report found, skipping vulnerability fail-check."
             exit 0
           fi
-          # count alerts with riskcode >= 2 (Medium or High)
           medium_or_higher=$(jq '[.site[].alerts[]? | select(.riskcode >= 2)] | length' ${ZAP_REPORT_JSON} || echo 0)
           echo "ZAP medium-or-higher alerts count: $medium_or_higher"
           if [ "$medium_or_higher" -gt 0 ]; then
-            echo "Creating summary of medium+ alerts..."
-            jq '[.site[].alerts[]? | select(.riskcode >= 2) | {name: .name, risk: .risk, url: .url, param: .param, description: .description}]' ${ZAP_REPORT_JSON} > zap-medium-plus.json || true
-            echo "ATTACH zap-medium-plus.json as artifact"
+            echo "Found $medium_or_higher medium+ alerts. Failing the job."
+            jq '[.site[].alerts[]? | select(.riskcode >= 2) | {name: .name, risk: .risk, url: .url, param: .param}]' ${ZAP_REPORT_JSON} > zap-medium-plus.json || true
             tar -czf zap-medium-plus.tar.gz zap-medium-plus.json || true
-            # upload via GitHub Actions artifacts (simple way is to keep file for artifact step below)
             exit 1
-          else
-            echo "No medium-or-higher ZAP alerts found."
-            exit 0
           fi
 
-      - name: Upload ZAP medium+ summary (if exists)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-medium-plus
-          path: |
-            zap-medium-plus.tar.gz
-            zap-medium-plus.json
-        continue-on-error: true
-
-      ################################################################
-      # ---------- Fortify SAST (run only if credentials present)  ###
-      ################################################################
-      - name: Check Fortify credentials present
-        id: check_fortify
-        run: |
-          # check for FoD or SSC secrets - adjust to your secrets names
-          if [ -n "${{ secrets.FOD_PAT }}" ] || [ -n "${{ secrets.SSC_TOKEN }}" ]; then
-            echo "run_fortify=true" >> $GITHUB_OUTPUT
-          else
-            echo "run_fortify=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Debug Fortify check
-        run: echo "run_fortify = ${{ steps.check_fortify.outputs.run_fortify }}"
-
-      - name: Run Fortify SAST Scan
-        if: ${{ steps.check_fortify.outputs.run_fortify == 'true' }}
+      # ---------------------
+      # SAST: Fortify (optional)
+      # ---------------------
+      - name: Run Fortify SAST (if credentials present)
+        if: ${{ secrets.FOD_PAT != '' || secrets.SSC_TOKEN != '' }}
         uses: fortify/github-action@ef5539bf4bd9c45c0bd971978f635a69eae55297
         with:
           sast-scan: true
           debricked-sca-scan: true
         env:
-          # FoD configuration (use your repo secrets)
           FOD_URL: https://ams.fortify.com
           FOD_TENANT: ${{ secrets.FOD_TENANT }}
           FOD_USER: ${{ secrets.FOD_USER }}
           FOD_PASSWORD: ${{ secrets.FOD_PAT }}
-          # SSC alternative configuration (uncomment/use as needed)
           SSC_URL: ${{ vars.SSC_URL }}
           SSC_TOKEN: ${{ secrets.SSC_TOKEN }}
           SC_SAST_TOKEN: ${{ secrets.SC_CLIENT_AUTH_TOKEN }}
           DEBRICKED_TOKEN: ${{ secrets.DEBRICKED_TOKEN }}
-
-          # Recommended options to wait for scan and apply policy check
           DO_WAIT: true
           DO_POLICY_CHECK: true
           DO_JOB_SUMMARY: true
           DO_EXPORT: true
-
-      - name: Stop and remove Juice Shop (cleanup)
-        if: steps.dast_target.outputs.mode == 'juice' || always()
-        run: |
-          docker rm -f juice_shop || true
-
-      ################################################################
-      # ---------- Optional: create GitHub Issue when ZAP found MED+ (example) 
-      # Note: This step is NOT enabled by default here; keep commented until you want issues auto-created.
-      ################################################################
-      # - name: Create GitHub Issue for ZAP findings
-      #   if: always() && (exists('zap-medium-plus.json') || false)
-      #   uses: peter-evans/create-issue-from-file@v4
-      #   with:
-      #     title: "DAST: Medium+ findings detected by ZAP"
-      #     content-filepath: zap-medium-plus.json
-      #     labels: security, dast
-
