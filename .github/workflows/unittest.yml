@@ -1,171 +1,28 @@
-name: Auto Unit Tests
+name: .NET Build and Test
 
-# Run on push to any branch and on pull requests
 on:
   push:
+    branches: [ main ]
   pull_request:
-
-permissions:
-  contents: read
+    branches: [ main ]
 
 jobs:
-  detect-and-test:
+  build-and-test:
     runs-on: ubuntu-latest
-    env:
-      NODE_VERSION: 18
-      PYTHON_VERSION: "3.x"
-      DOTNET_VERSION: "7.0"
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4 # Checkout the repository code
 
-      - name: Detect project type
-        id: detect
-        run: |
-          set -e
-          echo "Detecting project type..."
-          # default: none
-          echo "node=false" >> $GITHUB_OUTPUT
-          echo "python=false" >> $GITHUB_OUTPUT
-          echo "java=false" >> $GITHUB_OUTPUT
-          echo "dotnet=false" >> $GITHUB_OUTPUT
-          echo "go=false" >> $GITHUB_OUTPUT
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x' # Specify the .NET SDK version
 
-          if [ -f package.json ]; then
-            echo "Detected Node.js (package.json found)"
-            echo "node=true" >> $GITHUB_OUTPUT
-          fi
+    - name: Restore dependencies
+      run: dotnet restore
 
-          if [ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ]; then
-            echo "Detected Python"
-            echo "python=true" >> $GITHUB_OUTPUT
-          fi
+    - name: Build
+      run: dotnet build --no-restore
 
-          if [ -f pom.xml ] || ls *.gradle 1> /dev/null 2>&1; then
-            echo "Detected Java (Maven/Gradle)"
-            echo "java=true" >> $GITHUB_OUTPUT
-          fi
-
-          if ls *.csproj 1> /dev/null 2>&1 || [ -f global.json ]; then
-            echo "Detected .NET (csproj found)"
-            echo "dotnet=true" >> $GITHUB_OUTPUT
-          fi
-
-          if ls *.go 1> /dev/null 2>&1 || [ -f go.mod ]; then
-            echo "Detected Go"
-            echo "go=true" >> $GITHUB_OUTPUT
-          fi
-
-      # -------------------------
-      # Node.js tests
-      # -------------------------
-      - name: Setup Node and run tests
-        if: ${{ steps.detect.outputs.node == 'true' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Node: install & test
-        if: ${{ steps.detect.outputs.node == 'true' }}
-        run: |
-          # prefer lockfile install if present
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
-          # run tests (adjust scripts.test in package.json if needed)
-          if npm run | grep -q "test"; then
-            npm test
-          else
-            echo "No npm test script detected. Skipping."
-          fi
-
-      # -------------------------
-      # Python tests
-      # -------------------------
-      - name: Setup Python
-        if: ${{ steps.detect.outputs.python == 'true' }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Python: install & test
-        if: ${{ steps.detect.outputs.python == 'true' }}
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          elif [ -f pyproject.toml ]; then
-            # try installing with pip if poetry/poetry.lock not used
-            pip install .
-          fi
-          # Run pytest if exists
-          if python -c "import pytest" 2>/dev/null || [ -f pytest.ini ] || [ -d tests ]; then
-            pip install pytest >/dev/null || true
-            pytest -q || exit $?
-          else
-            # fallback: try running python -m unittest discover
-            python -m unittest discover -v || echo "No tests found."
-          fi
-
-      # -------------------------
-      # Java (Maven / Gradle)
-      # -------------------------
-      - name: Setup Java (for Maven/Gradle)
-        if: ${{ steps.detect.outputs.java == 'true' }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - name: Java: run tests
-        if: ${{ steps.detect.outputs.java == 'true' }}
-        run: |
-          if [ -f pom.xml ]; then
-            mvn -B test
-          elif ls *.gradle 1> /dev/null 2>&1; then
-            ./gradlew test || gradle test
-          else
-            echo "No Maven/Gradle build files found. Skipping Java tests."
-          fi
-
-      # -------------------------
-      # .NET tests
-      # -------------------------
-      - name: Setup .NET
-        if: ${{ steps.detect.outputs.dotnet == 'true' }}
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      - name: .NET: run tests
-        if: ${{ steps.detect.outputs.dotnet == 'true' }}
-        run: |
-          dotnet restore
-          dotnet test --no-build --verbosity minimal
-
-      # -------------------------
-      # Go tests
-      # -------------------------
-      - name: Setup Go
-        if: ${{ steps.detect.outputs.go == 'true' }}
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.20'
-      - name: Go: run tests
-        if: ${{ steps.detect.outputs.go == 'true' }}
-        run: |
-          go test ./... -v
-
-      # -------------------------
-      # If nothing detected
-      # -------------------------
-      - name: No recognized test framework found
-        if: >
-          steps.detect.outputs.node == 'false' &&
-          steps.detect.outputs.python == 'false' &&
-          steps.detect.outputs.java == 'false' &&
-          steps.detect.outputs.dotnet == 'false' &&
-          steps.detect.outputs.go == 'false'
-        run: |
-          echo "No supported project type detected (Node, Python, Java, .NET, Go)."
-          echo "If your project uses a different language or custom test command,"
-          echo "edit .github/workflows/unit-tests.yml and replace the Build & Run tests step."
+    - name: Run tests
+      run: dotnet test --no-build --verbosity normal
