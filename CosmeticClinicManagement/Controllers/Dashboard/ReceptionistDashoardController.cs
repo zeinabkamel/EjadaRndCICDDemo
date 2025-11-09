@@ -6,6 +6,7 @@ using Volo.Abp.AspNetCore.Mvc;
 namespace CosmeticClinicManagement.Controllers.Dashboard
 {
     [Route("api/app/receptionist-dashboard")]
+
     public class ReceptionistDashboardController : AbpController
     {
         private readonly ReceptionistDashboardAppService _service;
