@@ -37,6 +37,22 @@ jobs:
         run: |
           New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory
           dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
+      - name: Configure NuGet (GitHub Packages)
+        shell: powershell
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   
+        run: |
+          # Add GitHub Packages source for owner zeinabkamel
+          dotnet nuget add source "https://nuget.pkg.github.com/zeinabkamel/index.json" `
+            -n "GitHubPackages" `
+            --username $env:GITHUB_ACTOR `
+            --password "$env:NUGET_AUTH_TOKEN" `
+            --store-password-in-clear-text
+
+      - name: Restore
+        shell: powershell
+        run: |
+          dotnet restore
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
