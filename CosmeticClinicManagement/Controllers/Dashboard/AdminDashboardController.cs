@@ -19,6 +19,8 @@ namespace CosmeticClinicManagement.Controllers.Dashboard
         public async Task<ActionResult<AdminDashboardDto>> GetStats()
         {
             var result = await _service.GetDashboardDataAsync();
+            ejada.utlites.UtilityService utilityService = new ejada.utlites.UtilityService();
+            utilityService.Log("sad");
             return Ok(result);
         }
     }
